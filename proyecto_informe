@@ -1,0 +1,91 @@
+#!/usr/bin/awk -f
+function print_head(){
+	printf "-----Estadísticas de nacimientos en la Comunidad de Madrid en 2018-----\n\n"
+	printf "---Informe generado por %s desde script creado por Carlos Peralta Parro---\n\n", ENVIRON["USER"]
+}
+
+function mostrar_contenido(){
+	printf "Este archivo csv contiene datos de los %d municipios de la Comunidad.\n", contador
+	printf "En el año 2018 hubo en la Comunidad de Madrid un total de %d nacimientos.\n", total_nacidos 
+	printf "Nacieron %d hombres y %d mujeres, es decir un %.2f %% de hombres y un %.2f %% de mujeres.\n", total_hombres, total_mujeres, porc_hombres, porc_mujeres
+	printf "Hay %d municipios donde no nació nadie.\n", cont0
+	printf "El municipio con más nacimientos es %s con un total de %d.\n", mun_max, cont_max
+	printf "El segundo municipio con más nacimientos es %s con un total de %d.\n\n", mun_2max, cont_2max
+	printf "Los datos estadísticos son:\n\n"
+	printf "\tLa media por municipio es: %.2f\n", media
+	printf "\tLa desviación típica es %.2f\n\n", sd
+
+	#for para mostrar el total de nacimientos por grupo de edad
+        printf "A continuación se muestran los nacimientos por grupo de edad de la madre:\n\n"
+        for (i in edad_sum){
+                printf ("%s => %d\n", i, edad_sum[i]) | "sort -t, -k1 -n"
+        }
+
+}
+
+
+BEGIN {FS=";"; print_head()}
+
+MAIN 
+{
+if (NR!=1){
+
+total_nacidos += $5
+if ($3 == "Hombre") {
+	total_hombres += $5
+}	
+else if ($3 == "Mujer") {
+	total_mujeres += $5
+}
+
+#Agrupar nacimientos por municipio 
+mun_sum[$2] += $5
+
+#Agrupar por grupo de edad
+edad_sum[$4] += $5
+}
+}
+END {
+	porc_hombres = (total_hombres/total_nacidos)*100
+	porc_mujeres = (total_mujeres/total_nacidos)*100
+
+	#for para sacar el contador de municipios con 0 nacimientos
+	for (i in mun_sum){
+		if (mun_sum[i] == 0) {
+			cont0 = cont0+1	
+		}
+	}
+	#for para sacar el municipio con más nacimientos
+	max = 0
+	for (i in mun_sum){
+		if (mun_sum[i] > max){
+		       cont_max = mun_sum[i]
+		       max = mun_sum[i]
+		       mun_max = i
+	       }
+        }
+	#for para sacar el segundo municipio con más nacimientos
+	max = 0
+	for (i in mun_sum){
+                if (mun_max != i){
+			if (mun_sum[i] > max){
+                      		 cont_2max = mun_sum[i]
+                       		 max = mun_sum[i]
+                       		 mun_2max = i
+              		 }
+        
+		 }
+
+	}
+	#for para contar municipios y hacer la suma de los cuadrados para la sd
+	for (i in mun_sum){
+		contador += 1
+		suma_sqr += mun_sum[i]*mun_sum[i]
+	}
+	
+	
+	media = total_nacidos / contador
+	sd = sqrt(suma_sqr/contador-(total_nacidos/contador)^2) 
+	mostrar_contenido()
+	
+}
